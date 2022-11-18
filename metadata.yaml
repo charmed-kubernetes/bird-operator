@@ -8,5 +8,5 @@ docs: https://discourse.charmhub.io/t/bird-docs-index/7011
 source: https://github.com/charmed-kubernetes/bird-operator
 issues: https://bugs.launchpad.net/charm-bird
 series:
-  - focal
   - jammy
+  - focal
