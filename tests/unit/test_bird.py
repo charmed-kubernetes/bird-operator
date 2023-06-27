@@ -61,7 +61,6 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charm.BirdCharm.render_bird_conf")
     @mock.patch("charm.check_call")
     def test_config_changed(self, mock_call, mock_render, mock_open):
-
         mock_render.return_value = bird_config
         self.harness.update_config({"as-number": 12345})
         mock_open.assert_called_once_with("/etc/bird/bird.conf", "w")
