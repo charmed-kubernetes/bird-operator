@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import pytest
 import shlex
@@ -42,19 +43,21 @@ async def test_bgp(ops_test):
     )
 
     await ops_test.model.wait_for_idle(status="active", timeout=60 * 2)
-
-    log.info("Check BGP connection 0 to 1...")
-    cmd = "juju run --unit bird0/0 birdc show protocols"
-    rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
-    assert rc == 0, f"birdc failed: {(stderr or stdout).strip()}"
     # wokeignore:rule=master
     bgp_re = re.compile(r"bgp\d\s+BGP\s+master\s+up")
-    match = bgp_re.findall(stdout)
-    assert len(match) == 1
 
-    log.info("Check BGP connection 1 to 0...")
-    cmd = "juju run --unit bird1/0 birdc show protocols"
-    rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
-    assert rc == 0, f"birdc failed: {(stderr or stdout).strip()}"
-    match = bgp_re.findall(stdout)
-    assert len(match) == 1
+    async def _check_protocols(unit, direction):
+        log.info(f"Check BGP connection {direction}...")
+        action = await unit.run("birdc show protocols")
+        action = await action.wait()
+        rc, stderr, stdout = (
+            action.results.get(k) for k in ["return-code", "stderr", "stdout"]
+        )
+        assert rc == 0, f"birdc failed: {(stderr or stdout).strip()}"
+        match = bgp_re.findall(stdout)
+        assert len(match) == 1
+
+    await asyncio.gather(
+        asyncio.wait_for(_check_protocols(apps_a.units[0], "0 to 1..."), timeout=10),
+        asyncio.wait_for(_check_protocols(apps_b.units[0], "1 to 0..."), timeout=10),
+    )
